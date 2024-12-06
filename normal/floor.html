@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floor Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F5DEB3;
+            margin: 0;
+            padding: 20px;
+            color: black;
+        }
+        header {
+            text-align: center;
+            padding: 20px;
+        }
+        .data-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .data-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .data-box img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .back-btn {
+            display: block;
+            text-align: center;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            width: fit-content;
+        }
+        .back-btn:hover {
+            background-color: #eee;
+        }
+        table {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        td {
+            background-color: #fff;
+        }
+        .graph-container {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .dropdown-container {
+            padding: auto;
+            width: 25%;
+        }
+        .graph-right-container {
+            width: 70%;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        canvas {
+            width: 100%;
+            height: 400px;
+        }
+        .submit-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="floorTitle">Floor Data</h1>
+        <p id="latestTimestamp">Loading latest timestamp...</p>
+    </header>
+    <div>
+        <a href="index.html" class="back-btn">Back to Welcome Page</a>
+        <a href="data.html" class="back-btn">Go to Data Page</a>
+        <h2 class="back-btn">Sensor Data</h2>
+        <div id="dataContainer" class="data-container">
+            <!-- Data Boxes -->
+        </div>
+        <h2 class="back-btn">Sensor Data Table</h2>
+        <table id="dataTable">
+            <!-- Table will be populated here -->
+        </table>
+        <h2 class="back-btn">Control Entire Circuit</h2>
+        <div class="camera-container">
+            <iframe src="http://192.168.117.144" width="100%" height="400px" allowfullscreen></iframe>
+        </div>
+        <h2 class="back-btn">Sensor Data Graph</h2>
+        <div class="graph-container">
+            <div class="dropdown-container">
+                <label for="xAxisSelect">X Axis:</label>
+                <select id="xAxisSelect">
+                    <option value="created_at">Time</option>
+                    <option value="field1">Temperature</option>
+                    <option value="field2">Humidity</option>
+                    <option value="field3">Volatage</option>
+                    <option value="field4">Current</option>
+                </select>
+                <label for="yAxisSelect">Y Axis:</label>
+                <select id="yAxisSelect">
+                    <option value="field1">Temperature</option>
+                    <option value="field2">Humidity</option>
+                    <option value="field3">Volatage</option>
+                    <option value="field4">Current</option>
+                </select>
+                <button class="submit-btn" id="submitButton">Update Graph</button>
+            </div>
+            <div class="graph-right-container">
+                <canvas id="dataChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrls = {
+            latestData: "https://api.thingspeak.com/channels/2776658/feeds.json?results=1",
+            tableData: "https://api.thingspeak.com/channels/2776658/feeds.json?results=20",
+            graphData: "https://api.thingspeak.com/channels/2776658/feeds.json?results=10"
+        };
+
+        async function fetchData(url) {
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.feeds;
+        }
+
+        function displayDataBoxes(feeds) {
+            const dataContainer = document.getElementById("dataContainer");
+            const images = [
+                "images/img1.png", "images/img2.png", "images/img3.png", "images/img4.png", "images/img5.png"
+            ];
+
+            dataContainer.innerHTML = feeds.map(feed => {
+                return `
+                    <div class="data-box">
+                        <img src="${images[0]}" alt="Temperature">
+                        <h3>Temperature (°C)</h3>
+                        <p>${feed.field1 || 'N/A'}</p>
+                    </div>
+                    <div class="data-box">
+                        <img src="${images[1]}" alt="Humidity">
+                        <h3>Humidity (%)</h3>
+                        <p>${feed.field2 || 'N/A'}</p>
+                    </div>
+                    <div class="data-box">
+                        <img src="${images[2]}" alt="Voltage">
+                        <h3>Voltage (V)</h3>
+                        <p>${feed.field3 || 'N/A'}</p>
+                    </div>
+                    <div class="data-box">
+                        <img src="${images[3]}" alt="Sensor">
+                        <h3>Current (A)</h3>
+                        <p>${feed.field4 || 'N/A'}</p>
+                    </div>
+                    <div class="data-box">
+                        <img src="${images[4]}" alt="Sensor">
+                        <h3>Power (W)</h3>
+                        <p>${(feed.field3 && feed.field4) ? (feed.field3 * feed.field4).toFixed(2) : 'N/A'}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function displayTable(feeds) {
+            const table = document.getElementById("dataTable");
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Temperature (°C)</th>
+                        <th>Humidity (%)</th>
+                        <th>Voltage (V)</th>
+                        <th>Current (A)</th>
+                        <th>Power (W)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${feeds.map(feed => `
+                        <tr>
+                            <td>${new Date(feed.created_at).toLocaleString()}</td>
+                            <td>${feed.field1 || 'N/A'}</td>
+                            <td>${feed.field2 || 'N/A'}</td>
+                            <td>${feed.field3 || 'N/A'}</td>
+                            <td>${feed.field4 || 'N/A'}</td>
+                            <td>${(feed.field3 && feed.field4) ? (feed.field3 * feed.field4).toFixed(2) : 'N/A'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+
+        function setLatestTimestamp(feeds) {
+            const latestFeed = feeds[0];
+            const latestTimestamp = new Date(latestFeed.created_at).toLocaleString();
+            document.getElementById("latestTimestamp").textContent = `Latest Data Timestamp: ${latestTimestamp}`;
+        }
+
+        function setFloorTitle() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const floorName = urlParams.get('name') || 'Unknown Floor';
+            document.getElementById("floorTitle").textContent = `${floorName} Data`;
+        }
+
+        async function initializePage() {
+            setFloorTitle();
+
+            const latestData = await fetchData(apiUrls.latestData);
+            setLatestTimestamp(latestData);
+            displayDataBoxes(latestData);
+
+            const tableData = await fetchData(apiUrls.tableData);
+            displayTable(tableData.reverse());
+
+            const graphData = await fetchData(apiUrls.graphData);
+            renderGraph(graphData);
+        }
+
+        let chart;
+
+        function renderGraph(graphData) {
+            const labels = graphData.map(feed => new Date(feed.created_at).toLocaleString());
+            const field1Data = graphData.map(feed => feed.field1 || 0);
+            const field2Data = graphData.map(feed => feed.field2 || 0);
+
+            const ctx = document.getElementById("dataChart").getContext("2d");
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "Temperature",
+                            data: field1Data,
+                            borderColor: "rgb(75, 192, 192)",
+                            fill: false,
+                        },
+                        {
+                            label: "Humidity",
+                            data: field2Data,
+                            borderColor: "rgb(255, 99, 132)",
+                            fill: false,
+                        }
+                    ]
+                }
+            });
+        }
+
+        document.getElementById("submitButton").addEventListener("click", async () => {
+            const xAxis = document.getElementById("xAxisSelect").value;
+            const yAxis = document.getElementById("yAxisSelect").value;
+
+            const graphData = await fetchData(apiUrls.graphData);
+            const labels = graphData.map(feed => feed[xAxis]);
+            const data = graphData.map(feed => feed[yAxis] || 0);
+
+            const ctx = document.getElementById("dataChart").getContext("2d");
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: yAxis,
+                        data: data,
+                        borderColor: "rgb(75, 192, 192)",
+                        fill: false,
+                    }]
+                }
+            });
+        });
+
+        initializePage();
+    </script>
+</body>
+</html>

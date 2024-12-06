@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Power Consumption Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #F5DEB3;
+      margin: 0;
+      padding: 0;
+      color: #4a4a4a;
+    }
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #8b4513;
+    }
+    .output {
+      background: #fdf5e6;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .input-group {
+      margin: 15px 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .button {
+      display: block;
+      width: 100%;
+      background: #8b4513;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background: #a0522d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Power Consumption Dashboard</h1>
+    <div class="output" id="api-data">
+      Loading data...
+    </div>
+    <div class="output" id="weather-data">
+      Loading Bangalore weather data...
+    </div>
+    <div class="output" id="suggestions">
+      Loading suggestions...
+    </div>
+    <div class="input-group">
+      <label for="duration">Enter Duration (minutes):</label>
+      <input type="number" id="duration" placeholder="Enter duration in minutes">
+    </div>
+    <button class="button" onclick="calculate()">Calculate Energy Consumed</button>
+    <div class="output" id="results">
+    </div>
+  </div>
+
+  <script>
+    const thingspeakApiUrl = "https://api.thingspeak.com/channels/2776658/feeds.json?results=1";
+    const openWeatherApiUrl = "https://api.openweathermap.org/data/2.5/weather?q=Bangalore&appid=ff3a393da5d1b73b7ff20c6cf61fffdc&units=metric";
+
+    async function fetchData() {
+      const response = await fetch(thingspeakApiUrl);
+      const data = await response.json();
+      const voltage = parseFloat(data.feeds[0].field3);
+      const current = parseFloat(data.feeds[0].field4);
+      const temperature = parseFloat(data.feeds[0].field1);
+      const humidity = parseFloat(data.feeds[0].field2);
+
+      const power = (voltage * current).toFixed(2);
+      const powerFactor = (power / (voltage * current)).toFixed(2);
+
+      document.getElementById("api-data").innerHTML = `
+        <strong>Device Data:</strong><br>
+        Voltage: ${voltage} V <br>
+        Current: ${current} A <br>
+        Power: ${power} W <br>
+        Power Factor: ${powerFactor} <br>
+        Room Temperature: ${temperature} °C <br>
+        Room Humidity: ${humidity}%
+      `;
+
+      generateSuggestions(temperature, humidity);
+      return { power };
+    }
+
+    async function fetchWeatherData() {
+      const response = await fetch(openWeatherApiUrl);
+      const weatherData = await response.json();
+      const temp = weatherData.main.temp;
+      const humidity = weatherData.main.humidity;
+
+      document.getElementById("weather-data").innerHTML = `
+        <strong>Bangalore Weather:</strong><br>
+        Temperature: ${temp} °C <br>
+        Humidity: ${humidity}%
+      `;
+    }
+
+    function generateSuggestions(temperature, humidity) {
+      let fanSpeed, acTemp;
+
+      if (temperature > 30) {
+        fanSpeed = "High";
+        acTemp = "22-24°C";
+      } else if (temperature > 20) {
+        fanSpeed = "Medium";
+        acTemp = "24-26°C";
+      } else {
+        fanSpeed = "Low";
+        acTemp = "26-28°C";
+      }
+
+      let humidityAdvice =
+        humidity > 70
+          ? "Use a dehumidifier if available."
+          : "Humidity levels are normal.";
+
+      document.getElementById("suggestions").innerHTML = `
+        <strong>Suggestions:</strong><br>
+        Recommended Fan Speed: ${fanSpeed} <br>
+        Recommended AC Temperature: ${acTemp} <br>
+        ${humidityAdvice}
+      `;
+    }
+
+    async function calculate() {
+      const { power } = await fetchData();
+      const duration = parseFloat(document.getElementById("duration").value);
+      if (isNaN(duration) || duration <= 0) {
+        alert("Please enter a valid duration.");
+        return;
+      }
+
+      const energyConsumed = ((power * duration) / 60000).toFixed(4);
+
+      document.getElementById("results").innerHTML = `
+        Energy Consumed: ${energyConsumed} kWh
+      `;
+    }
+
+    fetchData();
+    fetchWeatherData();
+  </script>
+</body>
+</html>

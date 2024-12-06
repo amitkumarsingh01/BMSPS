@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ floor_name }} Floor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ floor_name }} Floor</h1>
+
+        <!-- Display latest sensor values in styled boxes -->
+        <div class="sensor-box-container">
+            <div class="sensor-box">
+                <h3>Temperature</h3>
+                <p>{{ sensor_data.latest.temp }} °C</p>
+            </div>
+            <div class="sensor-box">
+                <h3>Humidity</h3>
+                <p>{{ sensor_data.latest.humidity }} %</p>
+            </div>
+            <div class="sensor-box">
+                <h3>Gas</h3>
+                <p>{{ sensor_data.latest.gas }} ppm</p>
+            </div>
+            <div class="sensor-box">
+                <h3>Current</h3>
+                <p>{{ sensor_data.latest.current }} A</p>
+            </div>
+            <div class="sensor-box">
+                <h3>Voltage</h3>
+                <p>{{ sensor_data.latest.voltage }} V</p>
+            </div>
+            <div class="sensor-box">
+                <h3>Power</h3>
+                <p>{{ sensor_data.latest.power }} W</p>
+            </div>
+        </div>
+
+        <!-- Toggle Button for LED -->
+         <!--
+        <div class="toggle-container">
+            <h3>LED Control</h3>
+            <label class="switch">
+                <input type="checkbox" id="ledToggle" onclick="toggleLED()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    -->
+
+        <!-- Camera Feed -->
+        <div class="camera-container">
+            <h2>Live Camera Feed</h2>
+            <iframe src="http://192.168.65.10" width="100%" height="400px" allowfullscreen></iframe>
+        </div>
+
+        <h2>Sensor Data Over Time (as of {{ sensor_data.latest.time }})</h2>
+
+        <!-- 6 Graphs with Zoom -->
+        <div class="grid">
+            <div class="chart-container">
+                <canvas id="tempChart" onclick="zoomChart('tempChart')"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="humidityChart" onclick="zoomChart('humidityChart')"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="gasChart" onclick="zoomChart('gasChart')"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="currentChart" onclick="zoomChart('currentChart')"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="voltageChart" onclick="zoomChart('voltageChart')"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="powerChart" onclick="zoomChart('powerChart')"></canvas>
+            </div>
+        </div>        
+
+        <!-- Zoomable chart with timestamp -->
+        <script>
+            const sensorData = {{ sensor_data | tojson }};
+            
+            const createChart = (ctx, label, data) => {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sensorData.latest.time,  // Use proper timestamps for X-axis
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Time' }},  // Timestamp X-axis
+                            y: { title: { display: true, text: label }}
+                        }
+                    }
+                });
+            };
+
+            // Initialize charts
+            createChart(document.getElementById('tempChart').getContext('2d'), 'Temperature', sensorData.temp);
+            createChart(document.getElementById('humidityChart').getContext('2d'), 'Humidity', sensorData.humidity);
+            createChart(document.getElementById('gasChart').getContext('2d'), 'Gas', sensorData.gas);
+            createChart(document.getElementById('currentChart').getContext('2d'), 'Current', sensorData.current);
+            createChart(document.getElementById('voltageChart').getContext('2d'), 'Voltage', sensorData.voltage);
+            createChart(document.getElementById('powerChart').getContext('2d'), 'Power', sensorData.power);
+
+            // Zoom functionality
+            function zoomChart(chartId) {
+                const chartCanvas = document.getElementById(chartId);
+                const hammer = new Hammer(chartCanvas);
+                hammer.on('tap', () => {
+                    chartCanvas.style.transform = 'scale(2)';
+                    chartCanvas.style.transition = 'transform 0.5s';
+                });
+
+                hammer.on('doubletap', () => {
+                    chartCanvas.style.transform = 'scale(1)';
+                    chartCanvas.style.transition = 'transform 0.5s';
+                });
+            }
+
+            // Toggle LED functionality
+            function toggleLED() {
+                const isOn = document.getElementById('ledToggle').checked;
+                // Make an API call or send request to toggle the LED status
+                console.log("LED is now", isOn ? "ON" : "OFF");
+            }
+        </script>
+    </div>
+</body>
+</html>
